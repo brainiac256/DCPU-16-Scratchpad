@@ -1,0 +1,70 @@
+SET PC, DEMO
+
+;; CONIO ROUTINES
+
+;;   CONSTANTS
+;; ==============
+:CURSOR dat 0x8000
+:BLANK dat 0x7000
+:CONCOLOR dat 0xf000
+
+;;    ROUTINES
+;; ==============
+;;   printf(A as pointer to beginning
+;;               of null-terminated string)
+;;   getch(A as pointer to location to store
+;;              the char or NULL)
+;;   cls
+
+:printf
+; --{ WRITES A NULL-TERM STRING TO SCREEN }--
+; * A as pointer to beginning
+;        of null-terminated string
+; * CURSOR as location to write
+; * CONCOLOR
+IFE [A], 0 SET PC, POP
+; load next character into C
+SET C, [A]
+; set color bits
+AND C, 0x007f
+; because ASCII resides in 0x7f area
+BOR c, [CONCOLOR]
+; chase CURSOR pointer
+SET Z, [CURSOR]
+; the actual writing
+SET [Z], C
+; increment cursor and character loc
+ADD A, 1
+ADD [CURSOR], 1
+SET PC, printf
+; mmmm tail-call
+
+:getch
+; --{ WAITS ON KEYBOARD INPUT }--
+; * A as output - the character retrieved
+SET A, [0x9000]
+IFE A, 0 SET PC, getch
+SET [0x9000], 0
+SET PC, POP
+
+:cls
+; Overwrites the whole screen memory with [BLANK]
+set [CURSOR], 0x81ff
+:cls_loop
+set z, [cursor]
+set [z], [BLANK]
+ife [CURSOR], 0x8000 SET PC, POP
+SUB [CURSOR], 1
+set pc, cls_loop
+; Leaves CURSOR at 0x8000 for easy printing, too
+
+:msg1 dat "DEMO STRING 1, BITCHES", 0
+
+:DEMO
+JSR getch
+bor a, [CONCOLOR]
+set [BLANK], A
+JSR cls
+set a, msg1
+JSR printf
+set pc, DEMO

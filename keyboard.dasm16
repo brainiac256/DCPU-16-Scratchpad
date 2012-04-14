@@ -1,0 +1,39 @@
+;;
+;; Keyboard test. Type stuff to write on screen.
+;; It mighe be too slow outside of Cycle Exact
+;; and lose keys (you'll hear beeps).
+;;
+
+SET A, 0x8000
+:Loop
+SET B, [0x9000]
+IFE B, 0 SET PC, Loop
+IFE B, 0X1B SET PC, Crash
+BOR B, 0x7000
+SET [A], B
+SET [0x9000], 0
+ADD A, 1
+IFG A, 0x81ff SUB A, 0x0200
+SET PC, Loop
+:Crash
+SET A, 0x81ee
+SET B, msg1
+JSR Printf ;msg1 at 0x81ee
+
+:End SET PC, End
+
+:msg1 dat "  ~~  DONE.  ~~  ",0
+
+:Printf
+; A as offset,
+; B as pointer to beginning
+;   of null-terminated string
+IFE [B], 0x0000 SET PC, POP
+SET C, [B]
+AND C, 0x00ff
+ADD C, 0x1080
+SET [A], C
+ADD B, 1
+ADD A, 1
+SET PC, Printf
+; mmmm tail-call
