@@ -1,0 +1,67 @@
+;pseudorandom LCG subroutine
+;from Gleesus's ASCII barf code
+;Author: brainiac256
+
+set pc, main
+
+:seed dat 0x1234
+
+:rand
+;clobbers register A as output
+; A = (65521 * A + 57143) % 65535
+set a, [seed]
+MUL a, 0xfff1
+ADD a, 0xdf37
+;modulus implied by omitting overflow handling
+set [seed], a
+;return
+set pc, pop
+
+:morerand
+;uses the high 8 of two results from rand and
+;stores that back as new state
+;clobbers A as output, B as variable
+
+;first rand in B
+jsr rand
+set b, a
+;second rand in A
+jsr rand
+;A = (A&0xff00 + ((B&0xff00)>>8))
+and a, 0xff00
+and b, 0xff00
+shr b, 0x08
+add a, b
+set [seed], a
+set pc, pop
+
+:main
+;to demo the prng, get 256 results and store them
+;in the stack (reverse stack starting at 0xffff)
+
+;setup stack (underflow to 0xffff)
+sub sp, 1
+:loop0
+;z as loop counter
+set z, 0xff
+
+:loop1
+;loop on rand until z == 0
+jsr morerand
+set push, a
+sub z, 1
+ife z, 0
+set pc, next
+set pc, loop1
+
+:next
+;overwrites the console display with gibberish
+set j, 0x81ff
+:loop2
+jsr rand
+set [j], a
+sub j, 1
+ifg j, 0x7fff
+set pc, loop2
+set pc, loop0
+:end
