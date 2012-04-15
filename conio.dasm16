@@ -16,8 +16,8 @@ SET PC, DEMO
 ;;              the char or NULL)
 ;;   cls
 
-:printf
-; --{ WRITES A NULL-TERM STRING TO SCREEN }--
+:cprintf
+; --{ WRITES A C-STRING TO SCREEN }--
 ; * A as pointer to beginning
 ;        of null-terminated string
 ; * CURSOR as location to write
@@ -36,8 +36,26 @@ SET [Z], C
 ; increment cursor and character loc
 ADD A, 1
 ADD [CURSOR], 1
-SET PC, printf
+SET PC, cprintf
 ; mmmm tail-call
+
+:pprintf
+; --{ WRITES A P-STRING TO SCREEN }--
+; * A as pointer to beginning of string
+;        (length of string)
+set i, [a]
+:pprintf_l0
+add a, 1
+SET C, [A]
+; set color bits
+AND C, 0x007f       ; because ASCII resides in 0x7f area
+BOR c, [CONCOLOR]
+SET Z, [CURSOR]     ; chase CURSOR pointer
+SET [Z], C          ; the actual writing
+ADD [CURSOR], 1     ; increment cursor
+sub i, 1
+ife i, 0 set pc, pop
+set pc, pprintf_l0
 
 :getch
 ; --{ WAITS ON KEYBOARD INPUT }--
@@ -58,7 +76,20 @@ SUB [CURSOR], 1
 set pc, cls_loop
 ; Leaves CURSOR at 0x8000 for easy printing, too
 
+:newline
+; sets cursor to next newline position
+set a, [CURSOR]
+sub a, 0x8000
+mod a, 32 ;get current offset
+:newline_L0
+add a, 1
+add [CURSOR], 1
+ife a, 32 set pc, pop
+set pc, newline_L0
+
+
 :msg1 dat "DEMO STRING 1, BITCHES", 0
+:msg2 dat 0x0f, "Prefixed string"
 
 :DEMO
 JSR getch
@@ -66,5 +97,8 @@ bor a, [CONCOLOR]
 set [BLANK], A
 JSR cls
 set a, msg1
-JSR printf
+JSR cprintf
+JSR newline
+set a, msg2
+JSR pprintf
 set pc, DEMO
